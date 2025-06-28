@@ -7,10 +7,13 @@ local M = {}
 --- this is required due to needing to use the same language with different injection
 
 local api = vim.api
-parsers = {}
-local LanguageTree = require("vim.treesitter.languagetree")
+local parsers = {}
+local language_tree = require("vim.treesitter.languagetree")
 
-local function valid_lang(lang) return lang and lang ~= "" end
+---@param lang string?
+local function valid_lang(lang)
+    return lang and lang ~= ""
+end
 
 --- Creates a new parser
 ---
@@ -23,9 +26,11 @@ local function create_parser(bufnr, lang, opts)
     -- TODO need to remove previous existing buffer
     bufnr = vim._resolve_bufnr(bufnr)
 
-    local self = LanguageTree.new(bufnr, lang, opts)
+    local self = language_tree.new(bufnr, lang, opts)
 
-    local function bytes_cb(_, ...) self:_on_bytes(...) end
+    local function bytes_cb(_, ...)
+        self:_on_bytes(...)
+    end
 
     local function detach_cb(_, ...)
         if parsers[bufnr] == self then
@@ -34,7 +39,9 @@ local function create_parser(bufnr, lang, opts)
         self:_on_detach(...)
     end
 
-    local function reload_cb(_) self:_on_reload() end
+    local function reload_cb(_)
+        self:_on_reload()
+    end
 
     local source = self:source() --[[@as integer]]
 

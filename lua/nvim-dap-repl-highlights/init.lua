@@ -5,57 +5,61 @@ local utils = require("nvim-dap-repl-highlights.utils")
 local ts_override = require("nvim-dap-repl-highlights.treesitter_override")
 local buf_lang = {}
 
+---@class replhl.Config
+---@field adapters table<string,string>
+
+---@type replhl.Config
+local opts = {
+    adapters = {
+        ["pwa-node"] = "javascript",
+    },
+}
+
+---@param session dap.Session?
 function M.get_repl_lang_for_session(session)
     if not session then
         return nil
     end
-    local lang = session.config and session.config.repl_lang
-    if lang == nil then
-        local ok, ts_lang = pcall(require("nvim-treesitter.parsers").ft_to_lang, session.filetype)
-        if ok then
-            lang = ts_lang
-        end
-    end
-    if not lang then -- allow user to provide empty string to suppress this message
-        vim.notify("REPL highlight language not found for current dap session", vim.log.levels.WARN)
-    end
-    return lang
+    return opts.adapters[session.config.type]
 end
 
-function M.setup_injections(bufnr, injected_lang)
-    if injected_lang and not utils.check_treesitter_parser_exists(M.PARSER_NAME) then
-        vim.notify(
-            M.PARSER_NAME .. " parser not found, make sure you installed it using treesitter",
-            vim.log.levels.WARN
-        )
+---@param bufnr number
+---@param lang? string
+function M.setup_injections(bufnr, lang)
+    if lang and not utils.check_treesitter_parser_exists(M.PARSER_NAME) then
+        utils.notify_warn(M.PARSER_NAME .. " parser not found, make sure you installed it using treesitter")
         return
     end
-    if injected_lang and not utils.check_treesitter_parser_exists(injected_lang) then
-        vim.notify(
-            injected_lang .. " parser for injected language not found, make sure you installed it using treesitter",
-            vim.log.levels.WARN
-        )
+    if lang and not utils.check_treesitter_parser_exists(lang) then
+        utils.notify_warn(lang .. " parser not found, make sure you installed it using treesitter")
         return
     end
-    if injected_lang == nil then
-        injected_lang = ""
-    end
-    if buf_lang[bufnr] == injected_lang then
+
+    if buf_lang[bufnr] == lang then
         return
     end
+
+    ---@type table<string,string>?
     local injections = {}
-    if injected_lang ~= "" then
+    if lang then
         injections[M.PARSER_NAME] = '((user_input_statement) @injection.content (#set! injection.language "'
-            .. injected_lang
+            .. lang
             .. '") (#set! injection.combined) (#set! injection.include-children))'
     else
         injections = nil
     end
-    buf_lang[bufnr] = injected_lang
+
+    buf_lang[bufnr] = lang
+
     local tsparser = ts_override.get_parser(bufnr, M.PARSER_NAME, { injections = injections })
-    vim.treesitter.highlighter.new(tsparser)
+
+    if tsparser then
+        vim.treesitter.highlighter.new(tsparser)
+    end
 end
 
+---@param language string
+---@param bufnr number
 function M.setup_highlights(language, bufnr)
     bufnr = bufnr or 0
     if language then
@@ -69,32 +73,29 @@ function M.setup_highlights(language, bufnr)
     end
 end
 
-function M.setup()
-    local ts_parsers = require("nvim-treesitter.parsers")
+---@param config replhl.Config
+function M.setup(config)
     local parser_path = vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h:h")
 
-    -- Try to call the function that only exists in nvim-treesitter's master branch
-    local ok, parser_config = pcall(ts_parsers.get_parser_configs)
-    if ok then
-        parser_config[M.PARSER_NAME] = {
-            install_info = {
-                url = parser_path,
-                files = { "src/parser.c" },
-            },
-        }
-    else
-        vim.api.nvim_create_autocmd("User", {
-            group = vim.api.nvim_create_augroup("nvim_dap_repl_highlights", {}),
-            pattern = "TSUpdate",
-            callback = function()
-                ts_parsers[M.PARSER_NAME] = {
-                    install_info = {
-                        path = parser_path,
-                    },
-                }
-            end,
-        })
-    end
+    opts = vim.tbl_deep_extend("force", opts, config or {})
+
+    vim.api.nvim_create_autocmd("User", {
+        group = vim.api.nvim_create_augroup("nvim_dap_repl_highlights", {}),
+        pattern = "TSUpdate",
+        callback = function()
+            ---@diagnostic disable-next-line: missing-fields
+            require("nvim-treesitter.parsers").dap_repl = {
+                ---@diagnostic disable-next-line: missing-fields
+                install_info = {
+                    path = parser_path,
+                    generate = false,
+                    generate_from_json = false,
+                    queries = "queries/dap_repl",
+                },
+            }
+            vim.treesitter.language.register("dap_repl", { "dap_repl" })
+        end,
+    })
 end
 
 return M
