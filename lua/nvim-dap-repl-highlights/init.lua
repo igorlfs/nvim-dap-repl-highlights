@@ -1,6 +1,6 @@
 local M = {}
-M.PARSER_NAME = "dap_repl"
 
+local globals = require("nvim-dap-repl-highlights.globals")
 local utils = require("nvim-dap-repl-highlights.utils")
 local ts_override = require("nvim-dap-repl-highlights.treesitter_override")
 local buf_lang = {}
@@ -26,8 +26,8 @@ end
 ---@param bufnr number
 ---@param lang? string
 function M.setup_injections(bufnr, lang)
-    if lang and not utils.check_treesitter_parser_exists(M.PARSER_NAME) then
-        utils.notify_warn(M.PARSER_NAME .. " parser not found, make sure you installed it using treesitter")
+    if lang and not utils.check_treesitter_parser_exists(globals.PARSER_NAME) then
+        utils.notify_warn(globals.PARSER_NAME .. " parser not found, make sure you installed it using treesitter")
         return
     end
     if lang and not utils.check_treesitter_parser_exists(lang) then
@@ -42,7 +42,7 @@ function M.setup_injections(bufnr, lang)
     ---@type table<string,string>?
     local injections = {}
     if lang then
-        injections[M.PARSER_NAME] = '((user_input_statement) @injection.content (#set! injection.language "'
+        injections[globals.PARSER_NAME] = '((user_input_statement) @injection.content (#set! injection.language "'
             .. lang
             .. '") (#set! injection.combined) (#set! injection.include-children))'
     else
@@ -51,7 +51,7 @@ function M.setup_injections(bufnr, lang)
 
     buf_lang[bufnr] = lang
 
-    local tsparser = ts_override.get_parser(bufnr, M.PARSER_NAME, { injections = injections })
+    local tsparser = ts_override.get_parser(bufnr, globals.PARSER_NAME, { injections = injections })
 
     if tsparser then
         vim.treesitter.highlighter.new(tsparser)
@@ -84,7 +84,7 @@ function M.setup(config)
         pattern = "TSUpdate",
         callback = function()
             ---@diagnostic disable-next-line: missing-fields
-            require("nvim-treesitter.parsers").dap_repl = {
+            require("nvim-treesitter.parsers")[globals.PARSER_NAME] = {
                 ---@diagnostic disable-next-line: missing-fields
                 install_info = {
                     path = parser_path,
