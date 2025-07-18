@@ -12,6 +12,7 @@ local buf_lang = {}
 local opts = {
     adapters = {
         ["pwa-node"] = "javascript",
+        ["pwa-chrome"] = "javascript",
         debugpy = "python",
     },
 }
