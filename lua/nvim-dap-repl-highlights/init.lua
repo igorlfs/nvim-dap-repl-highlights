@@ -85,9 +85,7 @@ function M.setup(config)
         group = vim.api.nvim_create_augroup("nvim_dap_repl_highlights", {}),
         pattern = "TSUpdate",
         callback = function()
-            ---@diagnostic disable-next-line: missing-fields
             require("nvim-treesitter.parsers")[globals.PARSER_NAME] = {
-                ---@diagnostic disable-next-line: missing-fields
                 install_info = {
                     path = parser_path,
                     generate = false,
