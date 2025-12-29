@@ -13,6 +13,8 @@ local opts = {
         ["pwa-node"] = "javascript",
         ["pwa-chrome"] = "javascript",
         debugpy = "python",
+        nlua = "lua",
+        emmylua = "lua",
     },
 }
 
