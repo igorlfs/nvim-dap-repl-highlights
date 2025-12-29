@@ -2,7 +2,6 @@ local M = {}
 
 local globals = require("nvim-dap-repl-highlights.globals")
 local utils = require("nvim-dap-repl-highlights.utils")
-local ts_override = require("nvim-dap-repl-highlights.treesitter_override")
 local buf_lang = {}
 
 ---@class replhl.Config
@@ -41,22 +40,28 @@ function M.setup_injections(bufnr, lang)
         return
     end
 
-    ---@type table<string,string>?
-    local injections = {}
-    if lang then
-        injections[globals.PARSER_NAME] = '((user_input_statement) @injection.content (#set! injection.language "'
-            .. lang
-            .. '") (#set! injection.combined) (#set! injection.include-children))'
-    else
-        injections = nil
-    end
+    local injections = lang
+        and string.format(
+            [[(
+                (user_input_statement) @injection.content 
+                (#set! injection.language "%s") 
+                (#set! injection.combined) 
+                (#set! injection.include-children)
+            )]],
+            lang
+        )
 
     buf_lang[bufnr] = lang
 
-    local tsparser = ts_override.get_parser(bufnr, globals.PARSER_NAME, { injections = injections })
+    if injections then
+        vim.treesitter.query.set(globals.PARSER_NAME, "injections", injections)
 
-    if tsparser then
-        vim.treesitter.highlighter.new(tsparser)
+        local parser = vim.treesitter.get_parser(bufnr, globals.PARSER_NAME)
+
+        if parser then
+            -- TODO the injection is not updated if the language changes
+            vim.treesitter.highlighter.new(parser)
+        end
     end
 end
 
