@@ -1,8 +1,8 @@
 local M = {}
 
-local globals = require("nvim-dap-repl-highlights.globals")
 local utils = require("nvim-dap-repl-highlights.utils")
 local buf_lang = {}
+local ll = vim.log.levels
 
 ---@class replhl.Config
 ---@field adapters table<string,string>
@@ -21,7 +21,7 @@ local opts = {
 ---@param session dap.Session?
 function M.get_repl_lang_for_session(session)
     if not session then
-        return nil
+        return
     end
     return opts.adapters[session.config.type]
 end
@@ -29,12 +29,12 @@ end
 ---@param bufnr number
 ---@param lang? string
 function M.setup_injections(bufnr, lang)
-    if lang and not utils.check_treesitter_parser_exists(globals.PARSER_NAME) then
-        utils.notify_warn(globals.PARSER_NAME .. " parser not found, make sure you installed it using treesitter")
+    if lang and not utils.check_treesitter_parser_exists(utils.PARSER_NAME) then
+        vim.notify(utils.PARSER_NAME .. " parser not found, make sure you installed it using treesitter", ll.WARN)
         return
     end
     if lang and not utils.check_treesitter_parser_exists(lang) then
-        utils.notify_warn(lang .. " parser not found, make sure you installed it using treesitter")
+        vim.notify(lang .. " parser not found, make sure you installed it using treesitter", ll.WARN)
         return
     end
 
@@ -45,9 +45,9 @@ function M.setup_injections(bufnr, lang)
     local injections = lang
         and string.format(
             [[(
-                (user_input_statement) @injection.content 
-                (#set! injection.language "%s") 
-                (#set! injection.combined) 
+                (user_input_statement) @injection.content
+                (#set! injection.language "%s")
+                (#set! injection.combined)
                 (#set! injection.include-children)
             )]],
             lang
@@ -56,9 +56,9 @@ function M.setup_injections(bufnr, lang)
     buf_lang[bufnr] = lang
 
     if injections then
-        vim.treesitter.query.set(globals.PARSER_NAME, "injections", injections)
+        vim.treesitter.query.set(utils.PARSER_NAME, "injections", injections)
 
-        local parser = vim.treesitter.get_parser(bufnr, globals.PARSER_NAME)
+        local parser = vim.treesitter.get_parser(bufnr, utils.PARSER_NAME)
 
         if parser then
             -- TODO the injection is not updated if the language changes
@@ -92,7 +92,7 @@ function M.setup(config)
         group = vim.api.nvim_create_augroup("nvim_dap_repl_highlights", {}),
         pattern = "TSUpdate",
         callback = function()
-            require("nvim-treesitter.parsers")[globals.PARSER_NAME] = {
+            require("nvim-treesitter.parsers")[utils.PARSER_NAME] = {
                 install_info = {
                     path = parser_path,
                     generate = false,
