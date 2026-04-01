@@ -1,6 +1,6 @@
 local M = {}
 
-local utils = require("nvim-dap-repl-highlights.utils")
+local utils = require("dap-repl-highlights.utils")
 local health = vim.health
 
 function M.check()
