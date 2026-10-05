@@ -39,6 +39,8 @@ function M.inject_hl_by_session(bufnr, session)
         return
     end
 
+    local new_injection = buf_lang[bufnr] ~= lang
+
     if buf_lang[bufnr] == lang then
         return
     else
@@ -55,10 +57,18 @@ function M.inject_hl_by_session(bufnr, session)
         lang
     )
 
-    -- TODO the injection is not updated if the language changes
     vim.treesitter.query.set(utils.PARSER_NAME, "injections", injections)
 
     vim.treesitter.start(bufnr, utils.PARSER_NAME)
+
+    if new_injection then
+        -- Handle updating the injected language, see https://github.com/neovim/neovim/discussions/42112
+        local parser = assert(vim.treesitter.get_parser(bufnr, utils.PARSER_NAME))
+        ---@diagnostic disable-next-line: invisible
+        parser._injection_query = assert(vim.treesitter.query.get(utils.PARSER_NAME, "injections"))
+        parser:invalidate(true)
+        parser:parse(true)
+    end
 end
 
 return M
